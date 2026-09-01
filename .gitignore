@@ -48,10 +48,10 @@ dist/
 out/
 .docusaurus/
 
-# SQLite databases
-*.db
+# SQLite databases (Allow initial pre-seeded database)
 *.sqlite
 *.sqlite3
+!backend/gridlite.db
 
 # IDE and Editors
 .vscode/
@@ -64,6 +64,7 @@ out/
 .DS_Store
 Thumbs.db
 
-# Machine Learning weights
-backend/models/*.pkl
-backend/models/*.joblib
+# Machine Learning weights (Allow pre-trained model weights)
+!backend/models/*.pkl
+!backend/models/*.json
+
