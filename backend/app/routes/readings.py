@@ -55,6 +55,9 @@ def create_reading(reading_data: SensorReadingCreate, db: Session = Depends(get_
     Energy, Diagnosis, Health), emit unified events, and prune historical telemetry.
     """
     from app.pipeline.pipeline_service import PipelineService
+    from app.pipeline.auto_simulator import record_external_ingest
+    record_external_ingest()
+    
     db_reading, anomaly_info = PipelineService.ingest_and_process(db, reading_data)
 
     return {

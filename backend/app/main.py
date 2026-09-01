@@ -3,9 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 import os
+import asyncio
 from app.database import Base, engine, SessionLocal, seed_machines
 from app.routes import machines, readings, anomaly, change_detection, energy_routes, diagnosis_routes, health_routes, assistant_routes, event_routes
 from app.ml.config import MODEL_DIR
+from app.pipeline.auto_simulator import start_autonomous_telemetry_loop
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,7 +23,18 @@ async def lifespan(app: FastAPI):
         seed_machines(db)
     finally:
         db.close()
+        
+    # Start 24/7 autonomous cloud telemetry simulator in background
+    sim_task = asyncio.create_task(start_autonomous_telemetry_loop())
+    
     yield
+    
+    # Cleanup simulator on shutdown
+    sim_task.cancel()
+    try:
+        await sim_task
+    except asyncio.CancelledError:
+        pass
 
 app = FastAPI(
     title="GridLite Backend", 
@@ -29,15 +42,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Enable CORS for React frontend running at http://localhost:5173
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
-
+# Enable CORS for local dev and all production cloud/Vercel origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
