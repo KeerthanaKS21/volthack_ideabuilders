@@ -255,20 +255,18 @@ def clear_all_simulator_faults():
         m.active_fault = None
         m.fault_duration = 0
 
-async def start_autonomous_telemetry_loop():
+def run_telemetry_simulation():
     """
-    Continuous background loop that automatically ingests simulated telemetry 24/7 with rotating faults.
+    Continuous background thread that automatically ingests simulated telemetry 24/7 with rotating faults.
     """
     import sys
     if "unittest" in sys.modules:
         logger.info("Unit tests active; skipping autonomous telemetry loop.")
         return
 
-    logger.info("Starting GridLite 24/7 Autonomous Cloud Telemetry Simulator...")
+    logger.info("Starting GridLite 24/7 Autonomous Cloud Telemetry Simulator Thread...")
     step_counter = 0
-    
-    # Warmup slight offset
-    await asyncio.sleep(1.0)
+    time.sleep(1.0)
     
     while True:
         try:
@@ -279,10 +277,10 @@ async def start_autonomous_telemetry_loop():
                 target_m = next((m for m in AUTO_MACHINES if m.machine_id == s["target"]), None)
                 if target_m and target_m.active_fault is None:
                     mod = step_counter % s["interval_steps"]
-                    if mod == 5:
+                    if mod == 2:
                         target_m.active_fault = s["fault"]
                         target_m.fault_duration = 5
-                    elif mod == 5 + s["duration_steps"]:
+                    elif mod == 2 + s["duration_steps"]:
                         target_m.active_fault = None
                         target_m.fault_duration = 0
             
@@ -294,16 +292,15 @@ async def start_autonomous_telemetry_loop():
                     raw_data = machine.generate_reading()
                     reading_create = SensorReadingCreate(**raw_data)
                     PipelineService.ingest_and_process(db, reading_create)
+            except Exception as ex:
+                logger.error(f"Error ingesting simulated step: {ex}")
             finally:
                 db.close()
                 
-            await asyncio.sleep(2.0)
-        except asyncio.CancelledError:
-            logger.info("Autonomous telemetry loop cancelled.")
-            break
         except Exception as e:
             logger.error(f"Error in autonomous telemetry background task: {e}")
-            await asyncio.sleep(2.0)
+            
+        time.sleep(2.0)
 
 _simulator_started = False
 
@@ -316,15 +313,8 @@ def start_simulator_daemon():
     _simulator_started = True
     
     import threading
-    def worker():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(start_autonomous_telemetry_loop())
-        except Exception as e:
-            logger.error(f"Simulator daemon exited: {e}")
-            
-    t = threading.Thread(target=worker, daemon=True, name="GridLite-Cloud-Simulator")
+    t = threading.Thread(target=run_telemetry_simulation, daemon=True, name="GridLite-Cloud-Simulator")
     t.start()
     logger.info("GridLite 24/7 Simulator Daemon Thread started.")
+
 

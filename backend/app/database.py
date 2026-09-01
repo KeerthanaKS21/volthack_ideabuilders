@@ -82,15 +82,19 @@ def seed_machines(db: Session):
     seed_initial_telemetry(db)
 
 def seed_initial_telemetry(db: Session):
-    """Seed initial baseline readings if database is empty."""
+    """Seed initial baseline history and demonstration faults if database is empty."""
     from app.models import SensorReading
     from app.schemas import SensorReadingCreate
     from app.pipeline.pipeline_service import PipelineService
     from app.pipeline.auto_simulator import AUTO_MACHINES
     
-    if db.query(SensorReading).count() == 0:
-        for machine in AUTO_MACHINES:
-            raw = machine.generate_reading()
-            reading_data = SensorReadingCreate(**raw)
-            PipelineService.ingest_and_process(db, reading_data)
+    if db.query(SensorReading).count() < 30:
+        # Step through 15 cycles to establish baseline and trigger active anomalies
+        for step_idx in range(15):
+            for machine in AUTO_MACHINES:
+                machine.step()
+                raw = machine.generate_reading()
+                reading_data = SensorReadingCreate(**raw)
+                PipelineService.ingest_and_process(db, reading_data)
+
 

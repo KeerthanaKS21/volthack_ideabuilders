@@ -7,7 +7,7 @@ import asyncio
 from app.database import Base, engine, SessionLocal, seed_machines
 from app.routes import machines, readings, anomaly, change_detection, energy_routes, diagnosis_routes, health_routes, assistant_routes, event_routes
 from app.ml.config import MODEL_DIR
-from app.pipeline.auto_simulator import start_autonomous_telemetry_loop, start_simulator_daemon
+from app.pipeline.auto_simulator import start_simulator_daemon
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,13 +28,6 @@ async def lifespan(app: FastAPI):
     start_simulator_daemon()
     
     yield
-    
-    # Cleanup simulator on shutdown
-    sim_task.cancel()
-    try:
-        await sim_task
-    except asyncio.CancelledError:
-        pass
 
 app = FastAPI(
     title="GridLite Backend", 
