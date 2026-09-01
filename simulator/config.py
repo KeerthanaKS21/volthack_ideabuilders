@@ -3,9 +3,12 @@
 # Default update interval in seconds
 SIMULATION_INTERVAL = 1.0
 
+import os
+
 # Backend integration configuration (Phase 3)
 SEND_TO_BACKEND = True
-BACKEND_URL = "http://127.0.0.1:8000/api/readings"
+BACKEND_URL = os.getenv("GRIDLITE_BACKEND_URL", "http://127.0.0.1:8000/api/readings")
+
 
 # Ambient temperature in degrees Celsius
 AMBIENT_TEMP = 23.0
