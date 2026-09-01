@@ -43,6 +43,7 @@ class HealthOverviewResponse(BaseModel):
     critical_count: int
     top_priority_machine: Optional[str] = None
     machines: List[HealthOverviewItem]
+    ranked_machines: Optional[List[HealthOverviewItem]] = None
 
 class OperatorReviewRequest(BaseModel):
     status: str  # INVESTIGATE, UNDER_REVIEW, RESOLVED

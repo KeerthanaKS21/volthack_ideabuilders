@@ -250,5 +250,6 @@ class HealthEngine:
             attention_count=attention_count,
             critical_count=critical_count,
             top_priority_machine=top_priority,
-            machines=items
+            machines=items,
+            ranked_machines=items
         )

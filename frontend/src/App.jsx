@@ -488,14 +488,16 @@ function App() {
   }
 
   const getMachineHealthStatus = (machineId) => {
-    if (!healthOverview || !healthOverview.ranked_machines) return 'HEALTHY'
-    const found = healthOverview.ranked_machines.find(m => m.machine_id === machineId)
+    if (!healthOverview) return 'HEALTHY'
+    const list = healthOverview.machines || healthOverview.ranked_machines || []
+    const found = list.find(m => m.machine_id === machineId)
     return found ? found.health_status : 'HEALTHY'
   }
 
   const getMachinePriorityScore = (machineId) => {
-    if (!healthOverview || !healthOverview.ranked_machines) return 0
-    const found = healthOverview.ranked_machines.find(m => m.machine_id === machineId)
+    if (!healthOverview) return 0
+    const list = healthOverview.machines || healthOverview.ranked_machines || []
+    const found = list.find(m => m.machine_id === machineId)
     return found ? found.priority_score : 0
   }
 
@@ -841,7 +843,7 @@ function App() {
                   </div>
                 </div>
                 <div className="table-container">
-                  {healthOverview && healthOverview.ranked_machines && healthOverview.ranked_machines.filter(m => m.health_status !== 'HEALTHY').length > 0 ? (
+                  {healthOverview && (healthOverview.machines || healthOverview.ranked_machines) && (healthOverview.machines || healthOverview.ranked_machines).filter(m => m.health_status !== 'HEALTHY').length > 0 ? (
                     <table className="data-table">
                       <thead>
                         <tr>
@@ -854,7 +856,7 @@ function App() {
                         </tr>
                       </thead>
                       <tbody>
-                        {healthOverview.ranked_machines.filter(m => m.health_status !== 'HEALTHY').map(m => {
+                        {(healthOverview.machines || healthOverview.ranked_machines).filter(m => m.health_status !== 'HEALTHY').map(m => {
                           const machineObj = machines.find(item => item.machine_id === m.machine_id)
                           return (
                             <tr key={m.machine_id}>
