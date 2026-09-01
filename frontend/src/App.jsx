@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+import { api, API_BASE_URL } from './services/api'
 
 function App() {
   // Global Navigation State
@@ -100,16 +99,11 @@ function App() {
 
   const fetchMachines = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/machines`)
-      if (response.ok) {
-        const data = await response.json()
-        setMachines(data)
-        setBackendStatus('connected')
-        await fetchBehaviorChanges(data)
-        await fetchMachinesEnergy(data)
-      } else {
-        setBackendStatus('offline')
-      }
+      const data = await api.getMachines()
+      setMachines(data)
+      setBackendStatus('connected')
+      await fetchBehaviorChanges(data)
+      await fetchMachinesEnergy(data)
     } catch (error) {
       setBackendStatus('offline')
     } finally {
@@ -120,12 +114,9 @@ function App() {
 
   const fetchTariffConfig = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/energy/config`)
-      if (response.ok) {
-        const data = await response.json()
-        setTariff(data.tariff)
-        setInputTariff(data.tariff.toString())
-      }
+      const data = await api.getTariffConfig()
+      setTariff(data.tariff)
+      setInputTariff(data.tariff.toString())
     } catch (error) {
       console.error("Failed to load tariff config:", error)
     }
@@ -133,15 +124,10 @@ function App() {
 
   const fetchLatestReadings = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/readings/latest`)
-      if (response.ok) {
-        const data = await response.json()
-        setLatestReadings(data)
-        setBackendStatus('connected')
-        setLastUpdated(new Date())
-      } else {
-        setBackendStatus('offline')
-      }
+      const data = await api.getLatestReadings()
+      setLatestReadings(data)
+      setBackendStatus('connected')
+      setLastUpdated(new Date())
     } catch (error) {
       setBackendStatus('offline')
     }
@@ -152,11 +138,7 @@ function App() {
     try {
       const changePromises = machineList.map(async (m) => {
         try {
-          const res = await fetch(`${API_BASE_URL}/api/machines/${m.machine_id}/changes`)
-          if (res.ok) {
-            return await res.json()
-          }
-          return []
+          return await api.getMachineChanges(m.machine_id)
         } catch {
           return []
         }
@@ -174,12 +156,8 @@ function App() {
     try {
       const energyPromises = machineList.map(async (m) => {
         try {
-          const res = await fetch(`${API_BASE_URL}/api/energy/machines/${m.machine_id}`)
-          if (res.ok) {
-            const data = await res.json()
-            return { id: m.machine_id, data }
-          }
-          return null
+          const data = await api.getMachineEnergy(m.machine_id)
+          return data ? { id: m.machine_id, data } : null
         } catch {
           return null
         }
@@ -199,11 +177,8 @@ function App() {
 
   const fetchEnergyOverview = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/energy/overview`)
-      if (response.ok) {
-        const data = await response.json()
-        setEnergyOverview(data)
-      }
+      const data = await api.getEnergyOverview()
+      setEnergyOverview(data)
     } catch (error) {
       console.error("Failed to load factory energy overview:", error)
     }
@@ -211,11 +186,8 @@ function App() {
 
   const fetchDiagnosisOverview = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/diagnosis/overview`)
-      if (response.ok) {
-        const data = await response.json()
-        setDiagnosisOverview(data)
-      }
+      const data = await api.getDiagnosisOverview()
+      setDiagnosisOverview(data)
     } catch (error) {
       console.error("Failed to load diagnosis overview:", error)
     }
@@ -223,11 +195,8 @@ function App() {
 
   const fetchHealthOverview = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/health/overview`)
-      if (response.ok) {
-        const data = await response.json()
-        setHealthOverview(data)
-      }
+      const data = await api.getHealthOverview()
+      setHealthOverview(data)
     } catch (error) {
       console.error("Failed to load health overview:", error)
     }
@@ -235,11 +204,8 @@ function App() {
 
   const fetchUnifiedEvents = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/events/recent?limit=50`)
-      if (response.ok) {
-        const data = await response.json()
-        setUnifiedEvents(data)
-      }
+      const data = await api.getRecentEvents(50)
+      setUnifiedEvents(data)
     } catch (error) {
       console.error("Failed to load unified events:", error)
     }
@@ -247,11 +213,8 @@ function App() {
 
   const fetchQuickQuestions = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/assistant/quick-questions`)
-      if (response.ok) {
-        const data = await response.json()
-        setQuickQuestions(data)
-      }
+      const data = await api.getQuickQuestions()
+      setQuickQuestions(data)
     } catch (error) {
       console.error("Failed to load quick questions:", error)
     }
@@ -259,11 +222,8 @@ function App() {
 
   const fetchMachineTimeline = async (machineId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/events/machines/${machineId}/timeline?limit=20`)
-      if (response.ok) {
-        const data = await response.json()
-        setMachineTimeline(data)
-      }
+      const data = await api.getMachineTimeline(machineId, 20)
+      setMachineTimeline(data)
     } catch (error) {
       console.error("Failed to load machine event timeline:", error)
     }
@@ -280,17 +240,10 @@ function App() {
       return
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/api/energy/config`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tariff: parsed })
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setTariff(data.tariff)
-        fetchEnergyOverview()
-        if (machines.length > 0) fetchMachinesEnergy(machines)
-      }
+      const data = await api.updateTariff(parsed)
+      setTariff(data.tariff)
+      fetchEnergyOverview()
+      if (machines.length > 0) fetchMachinesEnergy(machines)
     } catch (error) {
       console.error("Failed to update tariff:", error)
     }
@@ -300,21 +253,13 @@ function App() {
     setTrainingStatus('training')
     setTrainingMessage(`Training Isolation Forest model for ${machineId}...`)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/anomaly/train/${machineId}`, {
-        method: 'POST'
-      })
-      const data = await response.json()
-      if (response.ok) {
-        setTrainingStatus('success')
-        setTrainingMessage(`Model trained successfully using ${data.training_samples} baseline samples.`)
-        await fetchLatestReadings()
-      } else {
-        setTrainingStatus('error')
-        setTrainingMessage(data.detail || 'Training failed.')
-      }
-    } catch {
+      const data = await api.trainAnomalyModel(machineId)
+      setTrainingStatus('success')
+      setTrainingMessage(`Model trained successfully using ${data.training_samples} baseline samples.`)
+      await fetchLatestReadings()
+    } catch (err) {
       setTrainingStatus('error')
-      setTrainingMessage('Connection error. Could not contact training API.')
+      setTrainingMessage(err.message || 'Training failed.')
     }
   }
 
@@ -322,19 +267,13 @@ function App() {
     if (!selectedDiagnosis || !selectedDiagnosis.event_id) return
     setIsUpdatingReview(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/diagnosis/events/${selectedDiagnosis.event_id}/review`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          review_status: reviewStatus,
-          notes: `Operator updated status to ${reviewStatus}`
-        })
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setSelectedDiagnosis(prev => ({ ...prev, review_status: data.review_status }))
-        fetchDiagnosisOverview()
-      }
+      const data = await api.updateDiagnosisReview(
+        selectedDiagnosis.event_id,
+        reviewStatus,
+        `Operator updated status to ${reviewStatus}`
+      )
+      setSelectedDiagnosis(prev => ({ ...prev, review_status: data.review_status }))
+      fetchDiagnosisOverview()
     } catch (err) {
       console.error("Failed to update operator review:", err)
     } finally {
@@ -346,16 +285,9 @@ function App() {
     if (!selectedHealth || !selectedHealth.event_id) return
     setIsUpdatingOperatorStatus(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/health/events/${selectedHealth.event_id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ operator_status: status })
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setSelectedHealth(prev => ({ ...prev, operator_status: data.operator_status }))
-        fetchHealthOverview()
-      }
+      const data = await api.updateHealthOperatorStatus(selectedHealth.event_id, status)
+      setSelectedHealth(prev => ({ ...prev, operator_status: data.operator_status }))
+      fetchHealthOverview()
     } catch (err) {
       console.error("Failed to update health operator status:", err)
     } finally {
@@ -365,11 +297,9 @@ function App() {
 
   const handleAcknowledgeEvent = async (eventId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/acknowledge`, { method: 'POST' })
-      if (response.ok) {
-        fetchUnifiedEvents()
-        if (selectedMachine) fetchMachineTimeline(selectedMachine.machine_id)
-      }
+      await api.acknowledgeEvent(eventId)
+      fetchUnifiedEvents()
+      if (selectedMachine) fetchMachineTimeline(selectedMachine.machine_id)
     } catch (err) {
       console.error("Failed to acknowledge event:", err)
     }
@@ -377,11 +307,9 @@ function App() {
 
   const handleResolveEvent = async (eventId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/resolve`, { method: 'POST' })
-      if (response.ok) {
-        fetchUnifiedEvents()
-        if (selectedMachine) fetchMachineTimeline(selectedMachine.machine_id)
-      }
+      await api.resolveEvent(eventId)
+      fetchUnifiedEvents()
+      if (selectedMachine) fetchMachineTimeline(selectedMachine.machine_id)
     } catch (err) {
       console.error("Failed to resolve event:", err)
     }
@@ -392,18 +320,15 @@ function App() {
     setIsResettingDemo(true)
     setDemoResetMessage('')
     try {
-      const response = await fetch(`${API_BASE_URL}/api/demo/reset`, { method: 'POST' })
-      if (response.ok) {
-        const data = await response.json()
-        setDemoResetMessage(`Demo reset successful: ${data.cleared_events_count} active events cleared.`)
-        await fetchMachines()
-        await fetchLatestReadings()
-        await fetchDiagnosisOverview()
-        await fetchHealthOverview()
-        await fetchUnifiedEvents()
-        if (selectedMachine) {
-          fetchMachineTimeline(selectedMachine.machine_id)
-        }
+      const data = await api.resetDemo()
+      setDemoResetMessage(`Demo reset successful: ${data.cleared_events_count} active events cleared.`)
+      await fetchMachines()
+      await fetchLatestReadings()
+      await fetchDiagnosisOverview()
+      await fetchHealthOverview()
+      await fetchUnifiedEvents()
+      if (selectedMachine) {
+        fetchMachineTimeline(selectedMachine.machine_id)
       }
     } catch (err) {
       console.error("Failed to reset demo state:", err)
@@ -427,58 +352,34 @@ function App() {
     setIsAssistantLoading(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/assistant/query`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: q,
-          conversation_id: assistantConversationId
-        })
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const botMsg = {
-          id: 'asst_' + Date.now(),
-          sender: 'assistant',
-          text: data.answer,
-          intent: data.intent,
-          evidence: data.evidence || [],
-          suggestions: data.suggestions || [],
-          machine_id: data.machine_id
-        }
-        setAssistantMessages(prev => [...prev, botMsg])
-      } else {
-        const errData = await response.json().catch(() => ({}))
-        const errorMsg = {
-          id: 'asst_err_' + Date.now(),
-          sender: 'assistant',
-          text: errData.detail || "Unable to reach the assistant service. Please verify backend connectivity.",
-          intent: 'ERROR',
-          evidence: [],
-          suggestions: ["Give me a factory summary.", "Which machine needs attention?"]
-        }
-        setAssistantMessages(prev => [...prev, errorMsg])
-      }
-    } catch {
-      const connErrorMsg = {
-        id: 'asst_net_err_' + Date.now(),
+      const data = await api.queryAssistant(q, assistantConversationId)
+      const botMsg = {
+        id: 'asst_' + Date.now(),
         sender: 'assistant',
-        text: "Connection error: Unable to communicate with GridLite backend.",
+        text: data.answer,
+        intent: data.intent,
+        evidence: data.evidence || [],
+        suggestions: data.suggestions || [],
+        machine_id: data.machine_id
+      }
+      setAssistantMessages(prev => [...prev, botMsg])
+    } catch (err) {
+      const errorMsg = {
+        id: 'asst_err_' + Date.now(),
+        sender: 'assistant',
+        text: err.message || "Unable to reach the assistant service. Please verify backend connectivity.",
         intent: 'ERROR',
         evidence: [],
         suggestions: ["Give me a factory summary.", "Which machine needs attention?"]
       }
-      setAssistantMessages(prev => [...prev, connErrorMsg])
+      setAssistantMessages(prev => [...prev, errorMsg])
     } finally {
       setIsAssistantLoading(false)
     }
   }
 
   const handleClearConversation = async () => {
-    try {
-      await fetch(`${API_BASE_URL}/api/assistant/conversations/${assistantConversationId}`, { method: 'DELETE' })
-    } catch {}
+    await api.clearConversation(assistantConversationId)
     const newId = 'conv_' + Math.random().toString(36).substring(2, 9)
     setAssistantConversationId(newId)
     setAssistantMessages([
@@ -528,34 +429,19 @@ function App() {
     const machineId = machine.machine_id
 
     // Fetch baseline
-    fetch(`${API_BASE_URL}/api/change-detection/baseline/${machineId}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => setSelectedBaseline(data))
-      .catch(() => {})
+    api.getMachineBaseline(machineId).then(data => setSelectedBaseline(data)).catch(() => {})
 
     // Fetch history
-    fetch(`${API_BASE_URL}/api/machines/${machineId}/readings?limit=50`)
-      .then(r => r.ok ? r.json() : [])
-      .then(data => setSelectedHistory(data.reverse()))
-      .catch(() => {})
+    api.getMachineReadings(machineId, 50).then(data => setSelectedHistory(Array.isArray(data) ? data.reverse() : [])).catch(() => {})
 
     // Fetch energy summary
-    fetch(`${API_BASE_URL}/api/energy/machines/${machineId}/summary?hours=24`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => setSelectedEnergySummary(data))
-      .catch(() => {})
+    api.getMachineEnergySummary(machineId, 24).then(data => setSelectedEnergySummary(data)).catch(() => {})
 
     // Fetch diagnosis
-    fetch(`${API_BASE_URL}/api/diagnosis/machines/${machineId}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => setSelectedDiagnosis(data))
-      .catch(() => {})
+    api.getMachineDiagnosis(machineId).then(data => setSelectedDiagnosis(data)).catch(() => {})
 
     // Fetch health
-    fetch(`${API_BASE_URL}/api/health/machines/${machineId}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => setSelectedHealth(data))
-      .catch(() => {})
+    api.getMachineHealth(machineId).then(data => setSelectedHealth(data)).catch(() => {})
 
     // Fetch timeline
     fetchMachineTimeline(machineId)
@@ -839,6 +725,27 @@ function App() {
             3. Tab Content Router
             ========================================================================= */}
         <main className="content-container">
+          {/* Render Cold Start & Connection Status Alert */}
+          {backendStatus === 'offline' && machines.length === 0 && (
+            <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <span className="pulse-dot" style={{ background: '#3B82F6', width: '10px', height: '10px', display: 'inline-block' }} />
+                <div>
+                  <div style={{ fontWeight: 600, color: '#1E3A8A', fontSize: '0.9rem' }}>Connecting to GridLite Backend...</div>
+                  <div style={{ fontSize: '0.8rem', color: '#3B82F6', marginTop: '2px' }}>
+                    Render cloud instance may take 15–30s to wake from sleep. Contacting {API_BASE_URL}
+                  </div>
+                </div>
+              </div>
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={fetchMachines}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                Retry Connection
+              </button>
+            </div>
+          )}
 
           {/* -----------------------------------------------------------------------
               TAB 1: DASHBOARD / OVERVIEW
