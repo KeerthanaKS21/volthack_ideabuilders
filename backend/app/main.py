@@ -46,6 +46,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.pipeline.auto_simulator import start_simulator_daemon, get_demo_status, reset_demo_scenario
+
 # Mount API routes
 app.include_router(machines.router)
 app.include_router(readings.router)
@@ -60,9 +62,29 @@ app.include_router(event_routes.router)
 
 @app.get("/api/health")
 def read_health():
+    demo_info = get_demo_status()
     return {
         "status": "ok",
         "database": "connected",
         "pipeline": "running",
+        "demo_mode": demo_info["demo_mode"],
+        "simulation_running": demo_info["simulation_running"],
+        "current_phase": demo_info["current_phase"],
+        "cycle_step": demo_info["cycle_step"],
         "service": "GridLite Backend"
+    }
+
+@app.get("/api/demo/status")
+def get_demo_simulation_status():
+    """Retrieve current automated demo scenario state, phase, and target machine."""
+    return get_demo_status()
+
+@app.post("/api/demo/reset")
+def reset_demo_simulation():
+    """Reset the automated demo scenario back to Phase 1 (Normal Operation)."""
+    reset_demo_scenario()
+    return {
+        "status": "ok",
+        "message": "Demo scenario reset to Phase 1 (Normal Operation)",
+        "demo_status": get_demo_status()
     }

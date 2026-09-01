@@ -1,38 +1,34 @@
 """
-Autonomous Cloud Telemetry Background Simulator (GridLite 24/7 Self-Sustaining Service)
-Enables cloud deployments on Render / Railway / Fly.io / EC2 to continuously
-simulate physical telemetry, anomalies, behavioral changes, energy drift,
-and diagnostic events in the background without needing a local CLI terminal running.
+Autonomous Cloud Telemetry Background Simulator (GridLite Automated Demo Engine)
+Enables cloud deployments on Render and local environments to continuously
+simulate realistic multi-parameter physical telemetry, progressive anomaly development,
+behavioral drift, energy waste tracking, diagnostic hypotheses, and health prioritization
+without requiring any manual terminal commands.
 """
 
 import os
 import time
 import math
 import random
-import asyncio
 import datetime
 import logging
 from typing import Dict, Any, Optional
 
 from app.database import SessionLocal
+from app.models import SensorReading, Anomaly, BehaviorChange, DiagnosisEvent, UnifiedEvent, MachineHealthEvent
 from app.schemas import SensorReadingCreate
 from app.pipeline.pipeline_service import PipelineService
 
-logger = logging.getLogger("gridlite.auto_simulator")
+logger = logging.getLogger("gridlite.demo_simulator")
 
-# Ambient conditions
+# Ambient conditions and physical parameters
 AMBIENT_TEMP = 23.0
 NOISE_FACTOR = 0.02
 
-# Last external post timestamp tracker
-last_external_ingest_time: float = 0.0
+# Demo mode configuration (reads from environment, defaults to True on Render/Cloud)
+DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() in ("true", "1", "yes")
 
-def record_external_ingest():
-    """Called whenever an external client POSTs to /api/readings."""
-    global last_external_ingest_time
-    last_external_ingest_time = time.time()
-
-# Machine Profiles
+# Machine Profiles (nominal baseline and sensor noise specifications)
 PROFILES = {
     "Motor": {
         "voltage": {"nominal": 400.0, "noise": 3.0},
@@ -104,10 +100,10 @@ class AutoMachine:
         self.operating_state = "RUNNING"
         self.time_in_state = 0
         self.state_durations = {
-            "RUNNING": random.randint(40, 100),
-            "IDLE": random.randint(10, 20),
+            "RUNNING": random.randint(60, 150),
+            "IDLE": random.randint(15, 30),
             "STARTING": 3,
-            "OFF": random.randint(5, 15)
+            "OFF": random.randint(10, 20)
         }
         self.last_temperature = AMBIENT_TEMP + 10.0
         self.last_vibration = 0.12
@@ -118,16 +114,24 @@ class AutoMachine:
         self.time_in_state += 1
         if self.active_fault:
             self.fault_duration += 1
+            # Maintain active operating state during fault
+            if self.operating_state not in ["RUNNING", "STARTING"]:
+                self.operating_state = "STARTING"
+                self.time_in_state = 0
+            elif self.operating_state == "STARTING" and self.time_in_state >= 3:
+                self.operating_state = "RUNNING"
+                self.time_in_state = 0
+            return
         
-        # State machine transition
+        # Natural state machine transition when normal
         current_max = self.state_durations.get(self.operating_state, 60)
         if self.time_in_state >= current_max:
             if self.operating_state == "RUNNING":
-                self.operating_state = "IDLE" if random.random() < 0.7 else "RUNNING"
-                self.state_durations["IDLE"] = random.randint(10, 25)
+                self.operating_state = "IDLE" if random.random() < 0.25 else "RUNNING"
+                self.state_durations["IDLE"] = random.randint(15, 30)
             elif self.operating_state == "IDLE":
                 self.operating_state = "RUNNING"
-                self.state_durations["RUNNING"] = random.randint(40, 100)
+                self.state_durations["RUNNING"] = random.randint(60, 150)
             elif self.operating_state == "OFF":
                 self.operating_state = "STARTING"
             elif self.operating_state == "STARTING":
@@ -156,30 +160,30 @@ class AutoMachine:
             
         target_vib = vib_nom * factors["vib_mult"]
         
-        # Fault effects
+        # Progressive physical fault dynamics
         if self.active_fault and state != "OFF":
-            severity = min(self.fault_duration / 15.0, 1.0)
+            severity = min(self.fault_duration / 20.0, 1.0)
             if self.active_fault == "OVERLOAD":
                 target_power *= (1.0 + severity * 0.55)
                 target_temp += (severity * 20.0)
                 target_vib *= (1.0 + severity * 0.25)
             elif self.active_fault == "OVERHEATING":
                 target_temp += (severity * 35.0)
-                target_power *= (1.0 + severity * 0.05)
+                target_power *= (1.0 + severity * 0.08)
             elif self.active_fault == "MECHANICAL_DEGRADATION":
-                target_vib *= (1.0 + severity * 2.8)
-                target_power *= (1.0 + severity * 0.20)
-                target_temp += (severity * 12.0)
+                target_vib *= (1.0 + severity * 2.8) # Vibration rises to ~0.50 mm/s
+                target_power *= (1.0 + severity * 0.18) # Friction power draw
+                target_temp += (severity * 14.0)       # Bearing friction heat
             elif self.active_fault == "VOLTAGE_UNBALANCE":
                 target_voltage *= (1.0 + (1 if self.fault_duration % 2 == 0 else -1) * severity * 0.15)
                 target_power *= (1.0 + severity * 0.15)
                 target_temp += (severity * 10.0)
             elif self.active_fault == "POWER_FACTOR_DROP":
-                target_pf = max(0.50, target_pf * (1.0 - severity * 0.35))
-                target_power *= (1.0 + severity * 0.25)
+                target_pf = max(0.52, target_pf * (1.0 - severity * 0.35))
+                target_power *= (1.0 + severity * 0.22)
                 target_temp += (severity * 8.0)
 
-        # Smooth gradual physical inertia
+        # Smooth gradual physical inertia (differential thermal and mechanical response)
         if state == "OFF":
             self.last_temperature += (AMBIENT_TEMP - self.last_temperature) * 0.08
             self.last_vibration += (0.0 - self.last_vibration) * 0.3
@@ -217,6 +221,7 @@ class AutoMachine:
             "operating_state": self.operating_state
         }
 
+# Registered virtual machines (identical to standard fleet)
 AUTO_MACHINES = [
     AutoMachine("MOTOR-01", "Motor 01", "Motor", "Production Line A"),
     AutoMachine("MOTOR-02", "Motor 02", "Motor", "Production Line A"),
@@ -226,54 +231,138 @@ AUTO_MACHINES = [
     AutoMachine("CONVEYOR-01", "Conveyor 01", "Conveyor", "Assembly Line")
 ]
 
-# Initialize with persistent demonstration faults active continuously
-AUTO_MACHINES[1].active_fault = "MECHANICAL_DEGRADATION" # MOTOR-02 (Critical - High Vibration)
-AUTO_MACHINES[1].fault_duration = 15
-AUTO_MACHINES[4].active_fault = "OVERHEATING"             # COMPRESSOR-01 (Attention - High Temp)
-AUTO_MACHINES[4].fault_duration = 12
-AUTO_MACHINES[2].active_fault = "POWER_FACTOR_DROP"      # PUMP-01 (Watch - Low Power Factor)
-AUTO_MACHINES[2].fault_duration = 10
+# Scenario state tracking
+_scenario_step: int = 0
+_total_scenario_steps: int = 110 # Total loop ~220 seconds (~3.6 minutes)
+_is_simulation_active: bool = False
+_last_prune_step: int = 0
 
-def inject_simulator_fault(machine_id: str, fault_type: str):
-    """Manually inject a fault into a simulated machine."""
-    target = next((m for m in AUTO_MACHINES if m.machine_id.upper() == machine_id.upper()), None)
-    if target:
-        target.active_fault = fault_type.upper()
-        target.fault_duration = 10
-        return True
-    return False
+def get_demo_status() -> dict:
+    """Return safe operational info about the current automated demo scenario."""
+    global _scenario_step, _is_simulation_active, DEMO_MODE
+    
+    # Calculate current phase based on step
+    if _scenario_step <= 30:
+        phase = "PHASE_1_NORMAL"
+        desc = "All machines operating normally within nominal baseline parameters"
+        target = None
+        fault = None
+    elif _scenario_step <= 65:
+        phase = "PHASE_2_DEVELOPING_ABNORMALITY"
+        desc = "MOTOR-01 developing progressive mechanical degradation (bearing wear & vibration surge)"
+        target = "MOTOR-01"
+        fault = "MECHANICAL_DEGRADATION"
+    elif _scenario_step <= 85:
+        phase = "PHASE_3_PEAK_ABNORMALITY"
+        desc = "MOTOR-01 critical anomaly with diagnostic root-cause hypothesis and priority ranking"
+        target = "MOTOR-01"
+        fault = "MECHANICAL_DEGRADATION"
+    else:
+        phase = "PHASE_4_RECOVERY"
+        desc = "MOTOR-01 recovering toward normal baseline operating state"
+        target = "MOTOR-01"
+        fault = "RECOVERING"
+        
+    return {
+        "demo_mode": DEMO_MODE,
+        "simulation_running": _is_simulation_active,
+        "current_phase": phase,
+        "phase_description": desc,
+        "cycle_step": _scenario_step,
+        "total_cycle_steps": _total_scenario_steps,
+        "target_machine": target,
+        "active_fault": fault
+    }
 
-def clear_all_simulator_faults():
-    """Clear all active simulator faults."""
+def reset_demo_scenario():
+    """Reset the automated demo scenario back to Phase 1 (Step 0) cleanly."""
+    global _scenario_step
+    _scenario_step = 0
     for m in AUTO_MACHINES:
         m.active_fault = None
         m.fault_duration = 0
+        m.operating_state = "RUNNING"
+        m.time_in_state = 0
+    logger.info("[DEMO] Scenario reset to Phase 1 (Normal Operation)")
+
+def prune_old_telemetry(db, keep_count: int = 3000):
+    """Keep SQLite database lightweight by retaining only recent sensor readings."""
+    try:
+        total = db.query(SensorReading).count()
+        if total > keep_count + 500:
+            oldest_to_keep = db.query(SensorReading.id)\
+                .order_by(SensorReading.timestamp.desc())\
+                .offset(keep_count)\
+                .first()
+            if oldest_to_keep:
+                db.query(SensorReading)\
+                    .filter(SensorReading.id <= oldest_to_keep[0])\
+                    .delete(synchronize_session=False)
+                db.commit()
+                logger.info(f"[RETENTION] Pruned database: kept latest {keep_count} sensor readings.")
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"[RETENTION] Telemetry prune warning: {e}")
 
 def run_telemetry_simulation():
     """
-    Continuous background thread that automatically ingests simulated telemetry 24/7 with persistent faults.
+    Continuous background thread executing the 4-phase repeatable demo scenario.
+    Ingests all telemetry through PipelineService so existing ML, Behavior, Energy,
+    Diagnosis, Health, and Event engines process every step naturally.
     """
+    global _scenario_step, _is_simulation_active, _last_prune_step
     import sys
     if "unittest" in sys.modules:
-        logger.info("Unit tests active; skipping autonomous telemetry loop.")
+        logger.info("[DEMO] Unit tests active; skipping autonomous telemetry loop.")
         return
 
-    logger.info("Starting GridLite 24/7 Autonomous Cloud Telemetry Simulator Thread...")
+    _is_simulation_active = True
+    logger.info("[DEMO] GridLite Automated Cloud Demo Simulator Thread Started (DEMO_MODE=True)")
     time.sleep(1.0)
     
     while True:
         try:
-            # Maintain demonstration faults unless cleared
-            if AUTO_MACHINES[1].active_fault is None:
-                AUTO_MACHINES[1].active_fault = "MECHANICAL_DEGRADATION"
-                AUTO_MACHINES[1].fault_duration = 15
-            if AUTO_MACHINES[4].active_fault is None:
-                AUTO_MACHINES[4].active_fault = "OVERHEATING"
-                AUTO_MACHINES[4].fault_duration = 12
-            if AUTO_MACHINES[2].active_fault is None:
-                AUTO_MACHINES[2].active_fault = "POWER_FACTOR_DROP"
-                AUTO_MACHINES[2].fault_duration = 10
-            
+            _scenario_step += 1
+            if _scenario_step > _total_scenario_steps:
+                _scenario_step = 1
+                logger.info("[DEMO] Restarting repeatable scenario loop at Phase 1...")
+
+            motor_01 = next((m for m in AUTO_MACHINES if m.machine_id == "MOTOR-01"), None)
+            comp_01 = next((m for m in AUTO_MACHINES if m.machine_id == "COMPRESSOR-01"), None)
+            pump_01 = next((m for m in AUTO_MACHINES if m.machine_id == "PUMP-01"), None)
+
+            # Scenario Phase Management
+            if _scenario_step <= 30:
+                # PHASE 1: Normal Operation (All Healthy)
+                if motor_01:
+                    motor_01.active_fault = None
+                if comp_01:
+                    comp_01.active_fault = None
+                if pump_01:
+                    pump_01.active_fault = None
+                    
+            elif 31 <= _scenario_step <= 85:
+                # PHASE 2 & 3: Developing & Peak Abnormality on MOTOR-01
+                if motor_01 and motor_01.active_fault != "MECHANICAL_DEGRADATION":
+                    motor_01.active_fault = "MECHANICAL_DEGRADATION"
+                    motor_01.fault_duration = 1
+                    logger.info("[DEMO] MOTOR-01 mechanical degradation fault initiated (Phase 2)")
+                    
+                # Introduce secondary minor overheating on COMPRESSOR-01 in Phase 3
+                if 60 <= _scenario_step <= 85 and comp_01 and comp_01.active_fault is None:
+                    comp_01.active_fault = "OVERHEATING"
+                    comp_01.fault_duration = 1
+                    
+            elif _scenario_step > 85:
+                # PHASE 4: Recovery
+                if motor_01 and motor_01.active_fault is not None:
+                    motor_01.active_fault = None
+                    motor_01.fault_duration = 0
+                    logger.info("[DEMO] MOTOR-01 fault resolved, entering recovery phase (Phase 4)")
+                if comp_01 and comp_01.active_fault is not None:
+                    comp_01.active_fault = None
+                    comp_01.fault_duration = 0
+
             # Step and ingest for all 6 machines
             db = SessionLocal()
             try:
@@ -282,29 +371,37 @@ def run_telemetry_simulation():
                     raw_data = machine.generate_reading()
                     reading_create = SensorReadingCreate(**raw_data)
                     PipelineService.ingest_and_process(db, reading_create)
+
+                # Periodic retention check every 50 steps
+                if _scenario_step - _last_prune_step >= 50:
+                    prune_old_telemetry(db, keep_count=3000)
+                    _last_prune_step = _scenario_step
+
             except Exception as ex:
-                logger.error(f"Error ingesting simulated step: {ex}")
+                logger.error(f"[DEMO] Pipeline ingestion error on step {_scenario_step}: {ex}")
             finally:
                 db.close()
                 
         except Exception as e:
-            logger.error(f"Error in autonomous telemetry background task: {e}")
+            logger.error(f"[DEMO] Unexpected error in background simulation thread: {e}")
             
         time.sleep(2.0)
 
 _simulator_started = False
 
 def start_simulator_daemon():
-    """Starts background telemetry simulator thread that runs 24/7."""
-    global _simulator_started
+    """Starts the background telemetry demo simulator thread if DEMO_MODE is enabled."""
+    global _simulator_started, DEMO_MODE
     import sys
     if "unittest" in sys.modules or _simulator_started:
         return
+        
+    if not DEMO_MODE:
+        logger.info("[DEMO] DEMO_MODE=False - Skipping autonomous background telemetry daemon.")
+        return
+        
     _simulator_started = True
-    
     import threading
-    t = threading.Thread(target=run_telemetry_simulation, daemon=True, name="GridLite-Cloud-Simulator")
+    t = threading.Thread(target=run_telemetry_simulation, daemon=True, name="GridLite-Cloud-Demo-Simulator")
     t.start()
-    logger.info("GridLite 24/7 Simulator Daemon Thread started.")
-
-
+    logger.info("[DEMO] GridLite 24/7 Demo Simulator Daemon Thread started.")

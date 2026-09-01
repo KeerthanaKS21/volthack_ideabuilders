@@ -7,6 +7,7 @@ KNOWN_MACHINES = {
     "PUMP-01": ["pump 1", "pump-1", "pump 01", "pump-01", "pump1"],
     "PUMP-02": ["pump 2", "pump-2", "pump 02", "pump-02", "pump2"],
     "COMPRESSOR-01": ["compressor 1", "compressor-1", "compressor 01", "compressor-01", "compressor1"],
+    "CONVEYOR-01": ["conveyor 1", "conveyor-1", "conveyor 01", "conveyor-01", "conveyor1"],
     "FAN-01": ["fan 1", "fan-1", "fan 01", "fan-01", "fan1"]
 }
 
@@ -50,7 +51,7 @@ class QuestionClassifier:
                     return canonical
 
         # 2. General regex check for [TYPE]-[NUMBER]
-        match = re.search(r"\b(motor|pump|compressor|fan)[-\s_]?0?([1-9])\b", q_lower)
+        match = re.search(r"\b(motor|pump|compressor|conveyor|fan)[-\s_]?0?([1-9])\b", q_lower)
         if match:
             m_type = match.group(1).upper()
             m_num = int(match.group(2))
