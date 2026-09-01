@@ -2,7 +2,7 @@ import numpy as np
 from sqlalchemy.orm import Session
 from app.models import SensorReading
 from app.ml.preprocessing import FEATURE_NAMES
-from simulator.config import PROFILES
+from app.ml.config import PROFILES
 
 class BaselineManager:
     @staticmethod

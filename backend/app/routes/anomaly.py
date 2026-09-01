@@ -10,11 +10,10 @@ sys.path.append(project_root)
 from app.database import get_db
 from app.models import Machine, SensorReading
 from app.schemas import ModelTrainingResponse
-from app.ml.config import MIN_TRAINING_SAMPLES
+from app.ml.config import MIN_TRAINING_SAMPLES, PROFILES
 from app.ml.preprocessing import extract_features, FEATURE_NAMES
 from app.ml.anomaly_detector import AnomalyDetector
 from app.ml.model_manager import ModelManager
-from simulator.config import PROFILES
 
 router = APIRouter(prefix="/api/anomaly", tags=["anomaly"])
 

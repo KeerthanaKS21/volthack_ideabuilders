@@ -7,6 +7,7 @@ import asyncio
 from app.database import Base, engine, SessionLocal, seed_machines
 from app.routes import machines, readings, anomaly, change_detection, energy_routes, diagnosis_routes, health_routes, assistant_routes, event_routes
 from app.ml.config import MODEL_DIR
+from app.ml.model_manager import ModelManager
 from app.pipeline.auto_simulator import start_simulator_daemon
 
 @asynccontextmanager
@@ -14,8 +15,9 @@ async def lifespan(app: FastAPI):
     # Initialize SQLite database and tables
     Base.metadata.create_all(bind=engine)
     
-    # Ensure local model weights directory exists
+    # Ensure local model weights directory exists & pre-train baseline ML models
     os.makedirs(MODEL_DIR, exist_ok=True)
+    ModelManager.ensure_all_models_trained()
     
     # Seed the default 6 virtual machines & initial telemetry
     db = SessionLocal()
