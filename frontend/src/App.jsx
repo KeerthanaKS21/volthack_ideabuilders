@@ -125,7 +125,17 @@ function App() {
   const fetchLatestReadings = async () => {
     try {
       const data = await api.getLatestReadings()
-      setLatestReadings(data)
+      if (Array.isArray(data)) {
+        const readingsMap = {}
+        data.forEach(r => {
+          if (r && r.machine_id) {
+            readingsMap[r.machine_id] = r
+          }
+        })
+        setLatestReadings(readingsMap)
+      } else if (data && typeof data === 'object') {
+        setLatestReadings(data)
+      }
       setBackendStatus('connected')
       setLastUpdated(new Date())
     } catch (error) {
@@ -497,6 +507,33 @@ function App() {
     } else if (s === 'IDLE' || s === 'STOPPED') {
       badgeClass = 'idle'
       label = s === 'IDLE' ? 'Idle' : 'Stopped'
+    }
+
+    return (
+      <span className={`status-badge ${badgeClass}`}>
+        <span className={`status-dot ${badgeClass}`} />
+        {label}
+      </span>
+    )
+  }
+
+  const renderOperatingStateBadge = (state) => {
+    const s = (state || 'RUNNING').toUpperCase()
+    let badgeClass = 'healthy'
+    let label = 'Running'
+
+    if (s === 'RUNNING') {
+      badgeClass = 'healthy'
+      label = 'Running'
+    } else if (s === 'STARTING') {
+      badgeClass = 'watch'
+      label = 'Starting'
+    } else if (s === 'IDLE') {
+      badgeClass = 'idle'
+      label = 'Idle'
+    } else if (s === 'OFF' || s === 'STOPPED') {
+      badgeClass = 'critical'
+      label = 'Off'
     }
 
     return (
@@ -881,7 +918,7 @@ function App() {
                                 <span className="machine-name-text">{m.machine_name} &bull; {m.location}</span>
                               </div>
                             </td>
-                            <td>{renderStatusBadge(reading ? reading.operating_state : 'RUNNING')}</td>
+                            <td>{renderOperatingStateBadge(reading ? reading.operating_state : 'RUNNING')}</td>
                             <td>{renderStatusBadge(health)}</td>
                             <td>{safeNumber(reading?.power, 2, ' kW')}</td>
                             <td>{safeNumber(reading?.temperature, 1, ' °C')}</td>
@@ -1023,7 +1060,7 @@ function App() {
                           </td>
                           <td>{m.machine_name}</td>
                           <td>{m.machine_type} &bull; {m.location}</td>
-                          <td>{renderStatusBadge(reading ? reading.operating_state : 'RUNNING')}</td>
+                          <td>{renderOperatingStateBadge(reading ? reading.operating_state : 'RUNNING')}</td>
                           <td>{renderStatusBadge(health)}</td>
                           <td>{safeNumber(reading?.power, 2, ' kW')}</td>
                           <td>{safeNumber(reading?.temperature, 1, ' °C')}</td>
