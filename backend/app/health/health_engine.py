@@ -29,19 +29,22 @@ class HealthEngine:
             .order_by(SensorReading.timestamp.desc())\
             .first()
 
-        # 2. Fetch latest anomaly
-        latest_anomaly = db.query(Anomaly)\
+        # 2. Fetch recent anomalies (within last 10 readings) to evaluate active condition
+        recent_anomalies = db.query(Anomaly)\
             .filter(Anomaly.machine_id == machine_id_upper)\
             .order_by(Anomaly.timestamp.desc())\
-            .first()
+            .limit(10)\
+            .all()
 
         anomaly_info = {}
-        if latest_anomaly:
-            is_anomaly = latest_anomaly.severity != "NORMAL"
+        if recent_anomalies:
+            severity_order = {"HIGH": 3, "MEDIUM": 2, "LOW": 1, "NORMAL": 0}
+            worst_anomaly = max(recent_anomalies, key=lambda a: severity_order.get(a.severity, 0))
+            is_anomaly = worst_anomaly.severity != "NORMAL"
             anomaly_info = {
                 "is_anomaly": is_anomaly,
-                "severity": latest_anomaly.severity,
-                "anomaly_score": latest_anomaly.anomaly_score
+                "severity": worst_anomaly.severity,
+                "anomaly_score": worst_anomaly.anomaly_score
             }
 
         # 3. Fetch active behavioral changes

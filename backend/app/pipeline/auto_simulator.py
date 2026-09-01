@@ -226,19 +226,13 @@ AUTO_MACHINES = [
     AutoMachine("CONVEYOR-01", "Conveyor 01", "Conveyor", "Assembly Line")
 ]
 
-# Initialize with realistic demonstration faults active immediately
-AUTO_MACHINES[1].active_fault = "MECHANICAL_DEGRADATION" # MOTOR-02
-AUTO_MACHINES[1].fault_duration = 10
-AUTO_MACHINES[4].active_fault = "OVERHEATING" # COMPRESSOR-01
-AUTO_MACHINES[4].fault_duration = 8
-
-# Fault scenarios for continuous live rotation
-FAULT_SCHEDULE = [
-    {"target": "MOTOR-02", "fault": "MECHANICAL_DEGRADATION", "duration_steps": 30, "interval_steps": 60},
-    {"target": "COMPRESSOR-01", "fault": "OVERHEATING", "duration_steps": 30, "interval_steps": 75},
-    {"target": "PUMP-01", "fault": "POWER_FACTOR_DROP", "duration_steps": 25, "interval_steps": 80},
-    {"target": "MOTOR-01", "fault": "OVERLOAD", "duration_steps": 25, "interval_steps": 90},
-]
+# Initialize with persistent demonstration faults active continuously
+AUTO_MACHINES[1].active_fault = "MECHANICAL_DEGRADATION" # MOTOR-02 (Critical - High Vibration)
+AUTO_MACHINES[1].fault_duration = 15
+AUTO_MACHINES[4].active_fault = "OVERHEATING"             # COMPRESSOR-01 (Attention - High Temp)
+AUTO_MACHINES[4].fault_duration = 12
+AUTO_MACHINES[2].active_fault = "POWER_FACTOR_DROP"      # PUMP-01 (Watch - Low Power Factor)
+AUTO_MACHINES[2].fault_duration = 10
 
 def inject_simulator_fault(machine_id: str, fault_type: str):
     """Manually inject a fault into a simulated machine."""
@@ -257,7 +251,7 @@ def clear_all_simulator_faults():
 
 def run_telemetry_simulation():
     """
-    Continuous background thread that automatically ingests simulated telemetry 24/7 with rotating faults.
+    Continuous background thread that automatically ingests simulated telemetry 24/7 with persistent faults.
     """
     import sys
     if "unittest" in sys.modules:
@@ -265,24 +259,20 @@ def run_telemetry_simulation():
         return
 
     logger.info("Starting GridLite 24/7 Autonomous Cloud Telemetry Simulator Thread...")
-    step_counter = 0
     time.sleep(1.0)
     
     while True:
         try:
-            step_counter += 1
-            
-            # Check scheduled demonstration faults
-            for s in FAULT_SCHEDULE:
-                target_m = next((m for m in AUTO_MACHINES if m.machine_id == s["target"]), None)
-                if target_m and target_m.active_fault is None:
-                    mod = step_counter % s["interval_steps"]
-                    if mod == 2:
-                        target_m.active_fault = s["fault"]
-                        target_m.fault_duration = 5
-                    elif mod == 2 + s["duration_steps"]:
-                        target_m.active_fault = None
-                        target_m.fault_duration = 0
+            # Maintain demonstration faults unless cleared
+            if AUTO_MACHINES[1].active_fault is None:
+                AUTO_MACHINES[1].active_fault = "MECHANICAL_DEGRADATION"
+                AUTO_MACHINES[1].fault_duration = 15
+            if AUTO_MACHINES[4].active_fault is None:
+                AUTO_MACHINES[4].active_fault = "OVERHEATING"
+                AUTO_MACHINES[4].fault_duration = 12
+            if AUTO_MACHINES[2].active_fault is None:
+                AUTO_MACHINES[2].active_fault = "POWER_FACTOR_DROP"
+                AUTO_MACHINES[2].fault_duration = 10
             
             # Step and ingest for all 6 machines
             db = SessionLocal()
