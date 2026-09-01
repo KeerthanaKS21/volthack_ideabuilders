@@ -125,8 +125,9 @@ class QuestionClassifier:
             "which machine should i investigate first", "which machine to investigate", 
             "investigate first", "highest priority", "highest investigation priority", 
             "top priority", "recommended investigation order", "how many machines need attention", 
-            "machines requiring attention", "which machines need attention", "priority score",
-            "health status of all", "overall health", "which machine is critical"
+            "machines requiring attention", "which machines need attention", "which machine needs attention",
+            "needs attention", "requiring attention", "priority score",
+            "health status of all", "overall health", "which machine is critical", "critical machines"
         ]):
             return "HEALTH", metadata
 

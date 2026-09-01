@@ -17,12 +17,13 @@ class BaselineManager:
 
         from app.ml.config import RECENT_WINDOW_SIZE
 
-        # Fetch historical running telemetry (offset by recent window size to exclude recent evaluation data)
+        # Fetch historical running telemetry (offset by recent window size, limit to 100 samples)
         readings = db.query(SensorReading)\
             .filter(SensorReading.machine_id == machine_id.upper())\
             .filter(SensorReading.operating_state == "RUNNING")\
             .order_by(SensorReading.timestamp.desc())\
             .offset(RECENT_WINDOW_SIZE)\
+            .limit(100)\
             .all()
 
         normal_readings = []

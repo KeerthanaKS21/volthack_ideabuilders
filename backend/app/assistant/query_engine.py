@@ -95,6 +95,8 @@ class QueryEngine:
                 readings = db.query(SensorReading)\
                     .filter(SensorReading.machine_id == m.machine_id)\
                     .filter(SensorReading.timestamp >= cutoff)\
+                    .order_by(SensorReading.timestamp.desc())\
+                    .limit(150)\
                     .all()
 
                 metrics = EnergyAnalyzer.calculate_window_energy(readings, baseline_power)

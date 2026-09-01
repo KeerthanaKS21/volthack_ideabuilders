@@ -10,7 +10,7 @@ export const API_BASE_URL = (
 /**
  * Standard fetch wrapper with timeout support for handling slow connections or Render cold starts.
  */
-async function fetchApi(endpoint, options = {}, timeoutMs = 20000) {
+async function fetchApi(endpoint, options = {}, timeoutMs = 45000) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 

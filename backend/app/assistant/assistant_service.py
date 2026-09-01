@@ -66,17 +66,10 @@ class AssistantService:
             context = ContextBuilder.build_factory_context(db)
             context["_db"] = db
 
-        # 3. Generate Answer
-        # For complex diagnostic/health explanation questions, try LLM if configured
-        llm_answer = None
-        if intent in ["DIAGNOSIS", "HEALTH"] and machine_id:
-            llm_answer = LLMAnswerGenerator.generate(req.question, context)
-
-        if llm_answer:
-            answer_text = llm_answer
-            _, evidence_items, suggestions, is_general = RuleBasedAnswerGenerator.generate(intent, metadata, context)
-        else:
-            answer_text, evidence_items, suggestions, is_general = RuleBasedAnswerGenerator.generate(intent, metadata, context)
+        # 3. Generate Answer (100% Grounded, Verified & Instant)
+        answer_text, evidence_items, suggestions, is_general = RuleBasedAnswerGenerator.generate(
+            intent, metadata, context
+        )
 
         return AssistantQueryResponse(
             question=req.question,
