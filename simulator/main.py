@@ -23,8 +23,25 @@ machine_instances = {}
 
 def run_simulation():
     """Background loop that steps machines, prints telemetry, and optionally POSTs to backend."""
+    step_count = 0
     while not stop_event.is_set():
         start_time = time.time()
+        step_count += 1
+        
+        # Autonomous rolling demonstration faults
+        auto_schedule = [
+            ("MOTOR-02", "MECHANICAL_DEGRADATION", 30, 60),
+            ("COMPRESSOR-01", "OVERHEATING", 30, 75),
+            ("PUMP-01", "ELECTRICAL_ANOMALY", 25, 80),
+            ("MOTOR-01", "OVERLOAD", 25, 90),
+        ]
+        for m_id, f_type, dur, intv in auto_schedule:
+            if m_id in machine_instances:
+                mod = step_count % intv
+                if mod == 5:
+                    machine_instances[m_id].inject_fault(f_type)
+                elif mod == 5 + dur:
+                    machine_instances[m_id].clear_fault()
         
         # Capture current time prefix
         time_str = datetime.datetime.now().strftime("%H:%M:%S")

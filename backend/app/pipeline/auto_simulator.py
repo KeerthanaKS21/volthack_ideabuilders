@@ -257,8 +257,7 @@ def clear_all_simulator_faults():
 
 async def start_autonomous_telemetry_loop():
     """
-    Continuous background loop that automatically ingests simulated telemetry 24/7.
-    Backs off whenever an external client is actively posting readings.
+    Continuous background loop that automatically ingests simulated telemetry 24/7 with rotating faults.
     """
     import sys
     if "unittest" in sys.modules:
@@ -273,34 +272,31 @@ async def start_autonomous_telemetry_loop():
     
     while True:
         try:
-            # Check if external CLI simulator is actively posting (yield if posted in last 6 seconds)
-            time_since_external = time.time() - last_external_ingest_time
-            if time_since_external > 6.0:
-                step_counter += 1
+            step_counter += 1
+            
+            # Check scheduled demonstration faults
+            for s in FAULT_SCHEDULE:
+                target_m = next((m for m in AUTO_MACHINES if m.machine_id == s["target"]), None)
+                if target_m and target_m.active_fault is None:
+                    mod = step_counter % s["interval_steps"]
+                    if mod == 5:
+                        target_m.active_fault = s["fault"]
+                        target_m.fault_duration = 5
+                    elif mod == 5 + s["duration_steps"]:
+                        target_m.active_fault = None
+                        target_m.fault_duration = 0
+            
+            # Step and ingest for all 6 machines
+            db = SessionLocal()
+            try:
+                for machine in AUTO_MACHINES:
+                    machine.step()
+                    raw_data = machine.generate_reading()
+                    reading_create = SensorReadingCreate(**raw_data)
+                    PipelineService.ingest_and_process(db, reading_create)
+            finally:
+                db.close()
                 
-                # Check scheduled demonstration faults
-                for s in FAULT_SCHEDULE:
-                    target_m = next((m for m in AUTO_MACHINES if m.machine_id == s["target"]), None)
-                    if target_m and target_m.active_fault is None:
-                        mod = step_counter % s["interval_steps"]
-                        if mod == 5:
-                            target_m.active_fault = s["fault"]
-                            target_m.fault_duration = 5
-                        elif mod == 5 + s["duration_steps"]:
-                            target_m.active_fault = None
-                            target_m.fault_duration = 0
-                
-                # Step and ingest for all 6 machines
-                db = SessionLocal()
-                try:
-                    for machine in AUTO_MACHINES:
-                        machine.step()
-                        raw_data = machine.generate_reading()
-                        reading_create = SensorReadingCreate(**raw_data)
-                        PipelineService.ingest_and_process(db, reading_create)
-                finally:
-                    db.close()
-                    
             await asyncio.sleep(2.0)
         except asyncio.CancelledError:
             logger.info("Autonomous telemetry loop cancelled.")
