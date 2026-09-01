@@ -79,3 +79,18 @@ def seed_machines(db: Session):
             )
             db.add(db_machine)
     db.commit()
+    seed_initial_telemetry(db)
+
+def seed_initial_telemetry(db: Session):
+    """Seed initial baseline readings if database is empty."""
+    from app.models import SensorReading
+    from app.schemas import SensorReadingCreate
+    from app.pipeline.pipeline_service import PipelineService
+    from app.pipeline.auto_simulator import AUTO_MACHINES
+    
+    if db.query(SensorReading).count() == 0:
+        for machine in AUTO_MACHINES:
+            raw = machine.generate_reading()
+            reading_data = SensorReadingCreate(**raw)
+            PipelineService.ingest_and_process(db, reading_data)
+

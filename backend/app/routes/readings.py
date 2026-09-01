@@ -78,6 +78,14 @@ def get_latest_readings(db: Session = Depends(get_db)):
             .first()
         if reading:
             latest_readings.append(format_reading(reading))
+        else:
+            from app.pipeline.auto_simulator import AUTO_MACHINES
+            from app.pipeline.pipeline_service import PipelineService
+            target_auto = next((am for am in AUTO_MACHINES if am.machine_id == machine.machine_id), None)
+            if target_auto:
+                raw = target_auto.generate_reading()
+                db_r, _ = PipelineService.ingest_and_process(db, SensorReadingCreate(**raw))
+                latest_readings.append(format_reading(db_r))
             
     return latest_readings
 

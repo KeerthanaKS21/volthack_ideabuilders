@@ -247,7 +247,7 @@ async def start_autonomous_telemetry_loop():
     step_counter = 0
     
     # Warmup slight offset
-    await asyncio.sleep(2.0)
+    await asyncio.sleep(1.0)
     
     while True:
         try:
@@ -285,4 +285,28 @@ async def start_autonomous_telemetry_loop():
             break
         except Exception as e:
             logger.error(f"Error in autonomous telemetry background task: {e}")
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(2.0)
+
+_simulator_started = False
+
+def start_simulator_daemon():
+    """Starts background telemetry simulator thread that runs 24/7."""
+    global _simulator_started
+    import sys
+    if "unittest" in sys.modules or _simulator_started:
+        return
+    _simulator_started = True
+    
+    import threading
+    def worker():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(start_autonomous_telemetry_loop())
+        except Exception as e:
+            logger.error(f"Simulator daemon exited: {e}")
+            
+    t = threading.Thread(target=worker, daemon=True, name="GridLite-Cloud-Simulator")
+    t.start()
+    logger.info("GridLite 24/7 Simulator Daemon Thread started.")
+

@@ -7,7 +7,7 @@ import asyncio
 from app.database import Base, engine, SessionLocal, seed_machines
 from app.routes import machines, readings, anomaly, change_detection, energy_routes, diagnosis_routes, health_routes, assistant_routes, event_routes
 from app.ml.config import MODEL_DIR
-from app.pipeline.auto_simulator import start_autonomous_telemetry_loop
+from app.pipeline.auto_simulator import start_autonomous_telemetry_loop, start_simulator_daemon
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,15 +17,15 @@ async def lifespan(app: FastAPI):
     # Ensure local model weights directory exists
     os.makedirs(MODEL_DIR, exist_ok=True)
     
-    # Seed the default 6 virtual machines
+    # Seed the default 6 virtual machines & initial telemetry
     db = SessionLocal()
     try:
         seed_machines(db)
     finally:
         db.close()
         
-    # Start 24/7 autonomous cloud telemetry simulator in background
-    sim_task = asyncio.create_task(start_autonomous_telemetry_loop())
+    # Start 24/7 autonomous cloud telemetry simulator in background daemon thread
+    start_simulator_daemon()
     
     yield
     
