@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+
 function App() {
   // Global Navigation State
   const [activeNav, setActiveNav] = useState('dashboard') // 'dashboard' | 'machines' | 'events' | 'energy' | 'diagnosis' | 'assistant'
@@ -98,7 +100,7 @@ function App() {
 
   const fetchMachines = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/machines')
+      const response = await fetch(`${API_BASE_URL}/api/machines`)
       if (response.ok) {
         const data = await response.json()
         setMachines(data)
@@ -118,7 +120,7 @@ function App() {
 
   const fetchTariffConfig = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/energy/config')
+      const response = await fetch(`${API_BASE_URL}/api/energy/config`)
       if (response.ok) {
         const data = await response.json()
         setTariff(data.tariff)
@@ -131,7 +133,7 @@ function App() {
 
   const fetchLatestReadings = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/readings/latest')
+      const response = await fetch(`${API_BASE_URL}/api/readings/latest`)
       if (response.ok) {
         const data = await response.json()
         setLatestReadings(data)
@@ -150,7 +152,7 @@ function App() {
     try {
       const changePromises = machineList.map(async (m) => {
         try {
-          const res = await fetch(`http://localhost:8000/api/machines/${m.machine_id}/changes`)
+          const res = await fetch(`${API_BASE_URL}/api/machines/${m.machine_id}/changes`)
           if (res.ok) {
             return await res.json()
           }
@@ -172,7 +174,7 @@ function App() {
     try {
       const energyPromises = machineList.map(async (m) => {
         try {
-          const res = await fetch(`http://localhost:8000/api/energy/machines/${m.machine_id}`)
+          const res = await fetch(`${API_BASE_URL}/api/energy/machines/${m.machine_id}`)
           if (res.ok) {
             const data = await res.json()
             return { id: m.machine_id, data }
@@ -197,7 +199,7 @@ function App() {
 
   const fetchEnergyOverview = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/energy/overview')
+      const response = await fetch(`${API_BASE_URL}/api/energy/overview`)
       if (response.ok) {
         const data = await response.json()
         setEnergyOverview(data)
@@ -209,7 +211,7 @@ function App() {
 
   const fetchDiagnosisOverview = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/diagnosis/overview')
+      const response = await fetch(`${API_BASE_URL}/api/diagnosis/overview`)
       if (response.ok) {
         const data = await response.json()
         setDiagnosisOverview(data)
@@ -221,7 +223,7 @@ function App() {
 
   const fetchHealthOverview = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/health/overview')
+      const response = await fetch(`${API_BASE_URL}/api/health/overview`)
       if (response.ok) {
         const data = await response.json()
         setHealthOverview(data)
@@ -233,7 +235,7 @@ function App() {
 
   const fetchUnifiedEvents = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/events/recent?limit=50')
+      const response = await fetch(`${API_BASE_URL}/api/events/recent?limit=50`)
       if (response.ok) {
         const data = await response.json()
         setUnifiedEvents(data)
@@ -245,7 +247,7 @@ function App() {
 
   const fetchQuickQuestions = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/assistant/quick-questions')
+      const response = await fetch(`${API_BASE_URL}/api/assistant/quick-questions`)
       if (response.ok) {
         const data = await response.json()
         setQuickQuestions(data)
@@ -257,7 +259,7 @@ function App() {
 
   const fetchMachineTimeline = async (machineId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/events/machines/${machineId}/timeline?limit=20`)
+      const response = await fetch(`${API_BASE_URL}/api/events/machines/${machineId}/timeline?limit=20`)
       if (response.ok) {
         const data = await response.json()
         setMachineTimeline(data)
@@ -278,7 +280,7 @@ function App() {
       return
     }
     try {
-      const response = await fetch('http://localhost:8000/api/energy/config', {
+      const response = await fetch(`${API_BASE_URL}/api/energy/config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tariff: parsed })
@@ -298,7 +300,7 @@ function App() {
     setTrainingStatus('training')
     setTrainingMessage(`Training Isolation Forest model for ${machineId}...`)
     try {
-      const response = await fetch(`http://localhost:8000/api/anomaly/train/${machineId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/anomaly/train/${machineId}`, {
         method: 'POST'
       })
       const data = await response.json()
@@ -320,7 +322,7 @@ function App() {
     if (!selectedDiagnosis || !selectedDiagnosis.event_id) return
     setIsUpdatingReview(true)
     try {
-      const response = await fetch(`http://localhost:8000/api/diagnosis/events/${selectedDiagnosis.event_id}/review`, {
+      const response = await fetch(`${API_BASE_URL}/api/diagnosis/events/${selectedDiagnosis.event_id}/review`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -344,7 +346,7 @@ function App() {
     if (!selectedHealth || !selectedHealth.event_id) return
     setIsUpdatingOperatorStatus(true)
     try {
-      const response = await fetch(`http://localhost:8000/api/health/events/${selectedHealth.event_id}/status`, {
+      const response = await fetch(`${API_BASE_URL}/api/health/events/${selectedHealth.event_id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ operator_status: status })
@@ -363,7 +365,7 @@ function App() {
 
   const handleAcknowledgeEvent = async (eventId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/events/${eventId}/acknowledge`, { method: 'POST' })
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/acknowledge`, { method: 'POST' })
       if (response.ok) {
         fetchUnifiedEvents()
         if (selectedMachine) fetchMachineTimeline(selectedMachine.machine_id)
@@ -375,7 +377,7 @@ function App() {
 
   const handleResolveEvent = async (eventId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/events/${eventId}/resolve`, { method: 'POST' })
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/resolve`, { method: 'POST' })
       if (response.ok) {
         fetchUnifiedEvents()
         if (selectedMachine) fetchMachineTimeline(selectedMachine.machine_id)
@@ -390,7 +392,7 @@ function App() {
     setIsResettingDemo(true)
     setDemoResetMessage('')
     try {
-      const response = await fetch('http://localhost:8000/api/demo/reset', { method: 'POST' })
+      const response = await fetch(`${API_BASE_URL}/api/demo/reset`, { method: 'POST' })
       if (response.ok) {
         const data = await response.json()
         setDemoResetMessage(`Demo reset successful: ${data.cleared_events_count} active events cleared.`)
@@ -425,7 +427,7 @@ function App() {
     setIsAssistantLoading(true)
 
     try {
-      const response = await fetch('http://localhost:8000/api/assistant/query', {
+      const response = await fetch(`${API_BASE_URL}/api/assistant/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -475,7 +477,7 @@ function App() {
 
   const handleClearConversation = async () => {
     try {
-      await fetch(`http://localhost:8000/api/assistant/conversations/${assistantConversationId}`, { method: 'DELETE' })
+      await fetch(`${API_BASE_URL}/api/assistant/conversations/${assistantConversationId}`, { method: 'DELETE' })
     } catch {}
     const newId = 'conv_' + Math.random().toString(36).substring(2, 9)
     setAssistantConversationId(newId)
@@ -526,31 +528,31 @@ function App() {
     const machineId = machine.machine_id
 
     // Fetch baseline
-    fetch(`http://localhost:8000/api/change-detection/baseline/${machineId}`)
+    fetch(`${API_BASE_URL}/api/change-detection/baseline/${machineId}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => setSelectedBaseline(data))
       .catch(() => {})
 
     // Fetch history
-    fetch(`http://localhost:8000/api/machines/${machineId}/readings?limit=50`)
+    fetch(`${API_BASE_URL}/api/machines/${machineId}/readings?limit=50`)
       .then(r => r.ok ? r.json() : [])
       .then(data => setSelectedHistory(data.reverse()))
       .catch(() => {})
 
     // Fetch energy summary
-    fetch(`http://localhost:8000/api/energy/machines/${machineId}/summary?hours=24`)
+    fetch(`${API_BASE_URL}/api/energy/machines/${machineId}/summary?hours=24`)
       .then(r => r.ok ? r.json() : null)
       .then(data => setSelectedEnergySummary(data))
       .catch(() => {})
 
     // Fetch diagnosis
-    fetch(`http://localhost:8000/api/diagnosis/machines/${machineId}`)
+    fetch(`${API_BASE_URL}/api/diagnosis/machines/${machineId}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => setSelectedDiagnosis(data))
       .catch(() => {})
 
     // Fetch health
-    fetch(`http://localhost:8000/api/health/machines/${machineId}`)
+    fetch(`${API_BASE_URL}/api/health/machines/${machineId}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => setSelectedHealth(data))
       .catch(() => {})
