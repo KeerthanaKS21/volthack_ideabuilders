@@ -759,26 +759,6 @@ function App() {
               Live
             </span>
 
-            <select 
-              className="btn btn-secondary btn-sm"
-              style={{ cursor: 'pointer', background: 'var(--surface)', fontWeight: 600, color: 'var(--primary)' }}
-              onChange={(e) => {
-                if (e.target.value) {
-                  const [mId, fType] = e.target.value.split(':')
-                  handleInjectFault(mId, fType)
-                  e.target.value = ''
-                }
-              }}
-              defaultValue=""
-            >
-              <option value="" disabled>⚡ Inject Fault...</option>
-              <option value="MOTOR-02:MECHANICAL_DEGRADATION">MOTOR-02 &bull; Bearing Wear (+Vibration)</option>
-              <option value="COMPRESSOR-01:OVERHEATING">COMPRESSOR-01 &bull; Overheating (+Temp)</option>
-              <option value="PUMP-01:POWER_FACTOR_DROP">PUMP-01 &bull; Low PF (+Energy Waste)</option>
-              <option value="MOTOR-01:OVERLOAD">MOTOR-01 &bull; Mechanical Overload (+Power)</option>
-              <option value="PUMP-02:VOLTAGE_UNBALANCE">PUMP-02 &bull; Voltage Phase Unbalance</option>
-            </select>
-
             <button 
               className="btn btn-secondary btn-sm"
               onClick={handleResetDemo}
@@ -1681,41 +1661,6 @@ function App() {
                   </div>
                 </div>
               )}
-
-              {/* Interactive Fault Injection for Live Demo */}
-              <div className="section-block">
-                <span className="section-title">⚡ Interactive Fault Injection</span>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
-                  <button 
-                    className="btn btn-secondary btn-sm"
-                    style={{ border: '1px solid var(--status-critical-border)', color: 'var(--status-critical-text)', fontWeight: 600 }}
-                    onClick={() => handleInjectFault(selectedMachine.machine_id, 'MECHANICAL_DEGRADATION')}
-                  >
-                    + Bearing Degradation
-                  </button>
-                  <button 
-                    className="btn btn-secondary btn-sm"
-                    style={{ border: '1px solid var(--status-critical-border)', color: 'var(--status-critical-text)', fontWeight: 600 }}
-                    onClick={() => handleInjectFault(selectedMachine.machine_id, 'OVERHEATING')}
-                  >
-                    + Overheating
-                  </button>
-                  <button 
-                    className="btn btn-secondary btn-sm"
-                    style={{ border: '1px solid var(--status-critical-border)', color: 'var(--status-critical-text)', fontWeight: 600 }}
-                    onClick={() => handleInjectFault(selectedMachine.machine_id, 'POWER_FACTOR_DROP')}
-                  >
-                    + PF Drop
-                  </button>
-                  <button 
-                    className="btn btn-secondary btn-sm"
-                    style={{ border: '1px solid var(--status-critical-border)', color: 'var(--status-critical-text)', fontWeight: 600 }}
-                    onClick={() => handleInjectFault(selectedMachine.machine_id, 'OVERLOAD')}
-                  >
-                    + Heavy Overload
-                  </button>
-                </div>
-              </div>
 
               {/* Behavioral Changes Table */}
               <div className="section-block">
