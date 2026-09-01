@@ -204,10 +204,20 @@ export const api = {
     return res.json()
   },
 
-  // Demo Reset
+  // Demo & Fault Injection
   resetDemo: async () => {
     const res = await fetchApi('/api/demo/reset', { method: 'POST' })
     if (!res.ok) throw new Error(`Failed to reset demo state: HTTP ${res.status}`)
+    return res.json()
+  },
+  injectFault: async (machineId, faultType = 'MECHANICAL_DEGRADATION') => {
+    const res = await fetchApi(`/api/demo/inject-fault?machine_id=${encodeURIComponent(machineId)}&fault_type=${encodeURIComponent(faultType)}`, { method: 'POST' })
+    if (!res.ok) throw new Error(`Failed to inject fault: HTTP ${res.status}`)
+    return res.json()
+  },
+  clearFaults: async () => {
+    const res = await fetchApi('/api/demo/clear-faults', { method: 'POST' })
+    if (!res.ok) throw new Error(`Failed to clear faults: HTTP ${res.status}`)
     return res.json()
   },
 }

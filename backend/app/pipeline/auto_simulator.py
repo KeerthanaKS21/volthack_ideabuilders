@@ -226,12 +226,34 @@ AUTO_MACHINES = [
     AutoMachine("CONVEYOR-01", "Conveyor 01", "Conveyor", "Assembly Line")
 ]
 
-# Fault scenarios for rich live demonstration
+# Initialize with realistic demonstration faults active immediately
+AUTO_MACHINES[1].active_fault = "MECHANICAL_DEGRADATION" # MOTOR-02
+AUTO_MACHINES[1].fault_duration = 10
+AUTO_MACHINES[4].active_fault = "OVERHEATING" # COMPRESSOR-01
+AUTO_MACHINES[4].fault_duration = 8
+
+# Fault scenarios for continuous live rotation
 FAULT_SCHEDULE = [
-    {"target": "MOTOR-02", "fault": "MECHANICAL_DEGRADATION", "duration_steps": 45, "interval_steps": 120},
-    {"target": "COMPRESSOR-01", "fault": "OVERHEATING", "duration_steps": 40, "interval_steps": 150},
-    {"target": "PUMP-01", "fault": "POWER_FACTOR_DROP", "duration_steps": 35, "interval_steps": 180},
+    {"target": "MOTOR-02", "fault": "MECHANICAL_DEGRADATION", "duration_steps": 30, "interval_steps": 60},
+    {"target": "COMPRESSOR-01", "fault": "OVERHEATING", "duration_steps": 30, "interval_steps": 75},
+    {"target": "PUMP-01", "fault": "POWER_FACTOR_DROP", "duration_steps": 25, "interval_steps": 80},
+    {"target": "MOTOR-01", "fault": "OVERLOAD", "duration_steps": 25, "interval_steps": 90},
 ]
+
+def inject_simulator_fault(machine_id: str, fault_type: str):
+    """Manually inject a fault into a simulated machine."""
+    target = next((m for m in AUTO_MACHINES if m.machine_id.upper() == machine_id.upper()), None)
+    if target:
+        target.active_fault = fault_type.upper()
+        target.fault_duration = 10
+        return True
+    return False
+
+def clear_all_simulator_faults():
+    """Clear all active simulator faults."""
+    for m in AUTO_MACHINES:
+        m.active_fault = None
+        m.fault_duration = 0
 
 async def start_autonomous_telemetry_loop():
     """
@@ -259,12 +281,12 @@ async def start_autonomous_telemetry_loop():
                 # Check scheduled demonstration faults
                 for s in FAULT_SCHEDULE:
                     target_m = next((m for m in AUTO_MACHINES if m.machine_id == s["target"]), None)
-                    if target_m:
+                    if target_m and target_m.active_fault is None:
                         mod = step_counter % s["interval_steps"]
-                        if mod == 10:
+                        if mod == 5:
                             target_m.active_fault = s["fault"]
-                            target_m.fault_duration = 0
-                        elif mod == 10 + s["duration_steps"]:
+                            target_m.fault_duration = 5
+                        elif mod == 5 + s["duration_steps"]:
                             target_m.active_fault = None
                             target_m.fault_duration = 0
                 

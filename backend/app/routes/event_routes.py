@@ -119,6 +119,8 @@ def reset_demo(
     db: Session = Depends(get_db)
 ):
     """Reset active events, anomalies, and health states, restoring a clean demonstration baseline."""
+    from app.pipeline.auto_simulator import clear_all_simulator_faults
+    clear_all_simulator_faults()
     cleared_count = EventManager.reset_demo(db=db)
     return {
         "status": "success",
@@ -126,3 +128,32 @@ def reset_demo(
         "cleared_events_count": cleared_count,
         "reset_timestamp": datetime.utcnow()
     }
+
+@router.post("/demo/inject-fault")
+def inject_fault(
+    machine_id: str,
+    fault_type: str = "MECHANICAL_DEGRADATION",
+    db: Session = Depends(get_db)
+):
+    """Inject a simulated industrial fault into a specific machine."""
+    from app.pipeline.auto_simulator import inject_simulator_fault
+    success = inject_simulator_fault(machine_id, fault_type)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Machine {machine_id} not found in simulator."
+        )
+    return {
+        "status": "success",
+        "machine_id": machine_id.upper(),
+        "fault_type": fault_type.upper(),
+        "message": f"Injected {fault_type} into {machine_id.upper()}."
+    }
+
+@router.post("/demo/clear-faults")
+def clear_faults():
+    """Clear all active simulator faults."""
+    from app.pipeline.auto_simulator import clear_all_simulator_faults
+    clear_all_simulator_faults()
+    return {"status": "success", "message": "All active simulator faults cleared."}
+
